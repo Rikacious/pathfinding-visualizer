@@ -1,5 +1,6 @@
 // Represents a single animation frame
 // Represents a single animation frame during algorithm visualization
+// Represents a single animation frame during algorithm visualization
 export interface Frame {
   visit?: [number, number][];     // cells visited in this frame
   frontier?: [number, number][];  // cells currently in the frontier
@@ -13,9 +14,15 @@ export interface RunResult {
   visitedCount: number;  // exact number of unique visited nodes
 }
 
-// Minimal structure for a grid cell
+// Grid cell structure (unified with what grid.ts and the visualizer use)
 export interface Cell {
-  wall: boolean;   // is this a wall?
-  weight: number;  // traversal cost (1 for normal, >1 for weighted cells)
+  r: number;            // row index
+  c: number;            // col index
+  wall: boolean;        // is this a wall?
+  weight: number;       // traversal cost (1 normal, >1 weighted)
+  start?: boolean;      // marker flags used by the UI
+  goal?: boolean;
+  visited?: boolean;    // UI visualization flags
+  inFrontier?: boolean;
+  inPath?: boolean;
 }
-
