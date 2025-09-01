@@ -1,35 +1,34 @@
 // src/algorithms/astar.ts
-import type { Frame } from "./bfs"; // reuse the Frame type
-
-type Cell = { wall: boolean; weight: number };
+import type { Frame, RunResult, Cell } from "../types";
 
 const key = (r: number, c: number) => `${r},${c}`;
-const manhattan = (a:{r:number;c:number}, b:{r:number;c:number}) =>
-  Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-
-function neighbors(r: number, c: number, rows: number, cols: number) {
+const neighbors = (r: number, c: number, rows: number, cols: number) => {
   const out: [number, number][] = [];
   if (r + 1 < rows) out.push([r + 1, c]);
   if (r - 1 >= 0)   out.push([r - 1, c]);
   if (c + 1 < cols) out.push([r, c + 1]);
   if (c - 1 >= 0)   out.push([r, c - 1]);
   return out;
-}
+};
+const manhattan = (a:{r:number;c:number}, b:{r:number;c:number}) =>
+  Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
 
 export function runAStar(
   grid: Cell[][],
   start: { r: number; c: number },
   goal:  { r: number; c: number }
-) {
-  const rows = grid.length, cols = grid[0].length;
-  const frames: Frame[] = [];
+): RunResult {
+  const rows = grid.length;
+  const cols = grid[0].length;
 
-  const g = new Map<string, number>();         // cost so far
-  const f = new Map<string, number>();         // g + heuristic
+  const g = new Map<string, number>();           // cost so far
+  const f = new Map<string, number>();           // g + heuristic
   const prev = new Map<string, string | null>();
-  const closed = new Set<string>();
+  const closed = new Set<string>();              // visited/expanded
 
-  const pq: [number, number, number][] = [];   // [fScore, r, c]
+  // priority queue via array + sort
+  const pq: [number, number, number][] = [];     // [fScore, r, c]
+  const frames: Frame[] = [];
 
   const sKey = key(start.r, start.c);
   g.set(sKey, 0);
@@ -40,24 +39,22 @@ export function runAStar(
   let found = false;
 
   while (pq.length) {
-    // pop node with smallest f
     pq.sort((a, b) => a[0] - b[0]);
     const [, r, c] = pq.shift()!;
     const k = key(r, c);
     if (closed.has(k)) continue;
     closed.add(k);
 
-    if (r === goal.r && c === goal.c) { found = true; break; }
-
     const visitBatch: [number, number][] = [[r, c]];
     const newFront: [number, number][] = [];
 
-    for (const [nr, nc] of neighbors(r, c, rows, cols)) {
-      const nk = key(nr, nc);
-      const cell = grid[nr][nc];
-      if (cell.wall) continue;
+    if (r === goal.r && c === goal.c) { found = true; break; }
 
-      const tentativeG = (g.get(k) ?? Infinity) + cell.weight;
+    for (const [nr, nc] of neighbors(r, c, rows, cols)) {
+      if (grid[nr][nc].wall) continue;
+      const nk = key(nr, nc);
+
+      const tentativeG = (g.get(k) ?? Infinity) + grid[nr][nc].weight;
       if (tentativeG < (g.get(nk) ?? Infinity)) {
         g.set(nk, tentativeG);
         const score = tentativeG + manhattan({ r: nr, c: nc }, goal);
@@ -68,11 +65,7 @@ export function runAStar(
       }
     }
 
-    frames.push({
-      visit: visitBatch,
-      frontier: newFront,
-      stats: { explored: closed.size, frontierSize: pq.length },
-    });
+    frames.push({ visit: visitBatch, frontier: newFront });
   }
 
   if (found) {
@@ -87,5 +80,5 @@ export function runAStar(
     frames.push({ path });
   }
 
-  return { frames, found };
+  return { frames, found, visitedCount: closed.size };
 }
